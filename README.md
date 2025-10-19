@@ -34,6 +34,8 @@ PORT=5212
 CACHE_DIR=cache/storage
 DB_PATH=cache/index.db
 QUARK_COOKIE=__quark_did=xxxx
+SSL_CERT_FILE=/path/to/cert.pem
+SSL_KEY_FILE=/path/to/key.pem
 ```
 
 ### Run the Server
@@ -42,7 +44,9 @@ QUARK_COOKIE=__quark_did=xxxx
 python -m quarkdav.main
 ```
 
-The server will listen on `http://0.0.0.0:5212` by default. Use the configured username and password for Basic authentication.
+The server will listen on `http://0.0.0.0:5212` by default. When both `SSL_CERT_FILE`
+and `SSL_KEY_FILE` are provided, QuarkDAV serves traffic over HTTPS instead. Use the
+configured username and password for Basic authentication.
 
 ### Docker
 

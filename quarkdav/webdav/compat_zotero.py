@@ -30,7 +30,10 @@ def build_propfind_response(
     responses = []
     normalized_request = request_path.strip("/")
     for entry in entries:
-        href = f"{base_url}/{entry.path.strip('/') if entry.path else ''}"
+        href_path = entry.path.strip("/") if entry.path else ""
+        href = f"{base_url}/{href_path}" if href_path else f"{base_url}/"
+        if entry.is_dir and not href.endswith("/"):
+            href = f"{href}/"
         if entry.path == normalized_request:
             display_name = Path(entry.path).name or Path(request_path).name or ""
         else:

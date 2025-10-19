@@ -90,19 +90,26 @@ class CacheIndex:
 
     def list_children(self, prefix: str) -> Iterable[CacheEntry]:
         normalized = prefix.strip("/")
+        normalized = normalized if normalized else ""
         base = f"{normalized}/" if normalized else ""
-        like_pattern = f"{base}%"
+        like_pattern = f"{normalized}" if normalized else "%"
+        like_children = f"{base}%" if base else "%"
         with self._connect() as conn:
             rows = conn.execute(
-                "SELECT * FROM cache WHERE path LIKE ?", (like_pattern,)
+                "SELECT * FROM cache WHERE path = ? OR path LIKE ?",
+                (normalized, like_children),
             ).fetchall()
+        seen = set()
         for row in rows:
             child_path = row["path"]
-            if normalized and not child_path.startswith(base):
+            if normalized and child_path == normalized:
                 continue
-            remainder = child_path[len(base) :]
+            remainder = child_path[len(base) :] if base and child_path.startswith(base) else child_path
             if "/" in remainder or remainder == "":
                 continue
+            if child_path in seen:
+                continue
+            seen.add(child_path)
             yield CacheEntry(
                 path=child_path,
                 is_dir=bool(row["is_dir"]),
