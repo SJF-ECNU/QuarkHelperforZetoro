@@ -8,7 +8,7 @@ from pathlib import Path
 from loguru import logger
 
 from ..cache.db import CacheEntry, CacheIndex
-from ..quark_client.api import QuarkClient
+from ..quark_client.api import BaseQuarkClient
 from ..quark_client.utils import ensure_parent, md5_file
 
 
@@ -24,7 +24,7 @@ class ResourceMetadata:
 class ResourceManager:
     """Bridges WebDAV operations with the cache and Quark client."""
 
-    def __init__(self, cache: CacheIndex, client: QuarkClient, cache_root: Path) -> None:
+    def __init__(self, cache: CacheIndex, client: BaseQuarkClient, cache_root: Path) -> None:
         self.cache = cache
         self.client = client
         self.cache_root = cache_root

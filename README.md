@@ -7,7 +7,7 @@ QuarkDAV is a lightweight Python WebDAV server that mimics Zotero's WebDAV requi
 - Basic WebDAV verbs: `PROPFIND`, `MKCOL`, `PUT`, `GET`, `HEAD`, `DELETE`, and `MOVE`
 - HTTP Basic authentication compatible with Zotero's WebDAV client
 - SQLite metadata cache and local file cache to avoid duplicate transfers
-- Pluggable Quark client layer (currently filesystem backed) for future API integration
+- Pluggable Quark client layer supporting filesystem or Alist-backed storage
 - Docker-friendly deployment
 
 ## Getting Started
@@ -36,7 +36,19 @@ DB_PATH=cache/index.db
 QUARK_COOKIE=__quark_did=xxxx
 SSL_CERT_FILE=/path/to/cert.pem
 SSL_KEY_FILE=/path/to/key.pem
+
+# Optional: switch to an Alist-backed WebDAV storage backend
+QUARK_BACKEND=alist
+ALIST_BASE_URL=https://alist.example.com/dav/quarkdav
+ALIST_USERNAME=alist-user
+ALIST_PASSWORD=alist-pass
+ALIST_TIMEOUT=30
+ALIST_VERIFY_SSL=true
 ```
+
+When `QUARK_BACKEND` is set to `alist`, QuarkDAV will proxy file operations to an
+Alist WebDAV deployment using the provided credentials. Leave the value as
+`filesystem` (the default) to continue using the local cache-only backend.
 
 ### Run the Server
 
