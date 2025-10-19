@@ -21,6 +21,14 @@ class Settings(BaseSettings):
     cache_dir: pathlib.Path = Field(pathlib.Path("cache/storage"), env="CACHE_DIR")
     db_path: pathlib.Path = Field(pathlib.Path("cache/index.db"), env="DB_PATH")
     quark_cookie: Optional[str] = Field(None, env="QUARK_COOKIE")
+    quark_backend: str = Field("filesystem", env="QUARK_BACKEND")
+
+    # Alist WebDAV backend configuration
+    alist_base_url: Optional[str] = Field(None, env="ALIST_BASE_URL")
+    alist_username: Optional[str] = Field(None, env="ALIST_USERNAME")
+    alist_password: Optional[str] = Field(None, env="ALIST_PASSWORD")
+    alist_timeout: int = Field(30, env="ALIST_TIMEOUT")
+    alist_verify_ssl: bool = Field(True, env="ALIST_VERIFY_SSL")
     ssl_cert_file: Optional[pathlib.Path] = Field(None, env="SSL_CERT_FILE")
     ssl_key_file: Optional[pathlib.Path] = Field(None, env="SSL_KEY_FILE")
     enable_tls: bool = Field(True, env="ENABLE_TLS")
@@ -29,7 +37,13 @@ class Settings(BaseSettings):
         env_file = ".env"
         case_sensitive = False
 
-    @validator("cache_dir", "db_path", "ssl_cert_file", "ssl_key_file", pre=True)
+    @validator(
+        "cache_dir",
+        "db_path",
+        "ssl_cert_file",
+        "ssl_key_file",
+        pre=True,
+    )
     def _expand_path(cls, value: str | pathlib.Path) -> Optional[pathlib.Path]:
         if value in (None, "", False):
             return None

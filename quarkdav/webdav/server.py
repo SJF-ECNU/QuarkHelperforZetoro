@@ -14,7 +14,7 @@ from loguru import logger
 
 from ..cache.db import CacheIndex, CacheEntry
 from ..config import Settings
-from ..quark_client.api import QuarkClient
+from ..quark_client import build_client
 from .compat_zotero import build_propfind_response, normalize_depth
 from .resource import ResourceManager
 
@@ -50,8 +50,7 @@ class BasicAuthMiddleware:
 
 def create_app(settings: Settings) -> web.Application:
     cache = CacheIndex(settings.db_path)
-    quark_root = settings.cache_dir
-    client = QuarkClient(quark_root)
+    client = build_client(settings)
     resource_manager = ResourceManager(cache, client, settings.cache_dir)
     for required in ("zotero", "zotero/storage"):
         resource_manager.ensure_directory(required)

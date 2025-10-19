@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+
 from loguru import logger
 
 from .config import get_settings
