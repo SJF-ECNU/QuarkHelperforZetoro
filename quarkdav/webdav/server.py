@@ -58,7 +58,22 @@ def create_app(settings: Settings) -> web.Application:
 
     auth = BasicAuthMiddleware(settings.webdav_user, settings.webdav_password)
 
-    app = web.Application(middlewares=[auth.middleware])
+    @web.middleware
+    async def request_logger(request: web.Request, handler):
+        path = request.path_qs or "/"
+        logger.debug(">> {} {}", request.method, path)
+        try:
+            response = await handler(request)
+        except web.HTTPException as exc:
+            logger.debug("<< {} {} -> {}", request.method, path, exc.status)
+            raise
+        except Exception:
+            logger.exception("!! {} {} failed", request.method, path)
+            raise
+        logger.debug("<< {} {} -> {}", request.method, path, response.status)
+        return response
+
+    app = web.Application(middlewares=[request_logger, auth.middleware])
 
     async def handle_propfind(request: web.Request) -> web.StreamResponse:
         depth = normalize_depth(request.headers.get("Depth"))
@@ -87,7 +102,7 @@ def create_app(settings: Settings) -> web.Application:
         payload = body.encode("utf-8")
         headers = {
             "Content-Length": str(len(payload)),
-            "DAV": "1,2",
+            "DAV": "1",
         }
         resp = web.Response(
             status=207,
@@ -104,7 +119,7 @@ def create_app(settings: Settings) -> web.Application:
         allowed = "OPTIONS, PROPFIND, MKCOL, PUT, GET, HEAD, DELETE, MOVE"
         headers = {
             "Allow": allowed,
-            "DAV": "1,2",
+            "DAV": "1",
             "MS-Author-Via": "DAV",
             "Content-Length": "0",
         }
@@ -121,7 +136,7 @@ def create_app(settings: Settings) -> web.Application:
         if parent_path and not resource_manager.stat(parent_path):
             raise web.HTTPConflict(text="Parent collection does not exist")
         resource_manager.ensure_directory(path)
-        return web.Response(status=201)
+        return web.Response(status=201, headers={"Content-Length": "0"})
 
     async def handle_put(request: web.Request) -> web.StreamResponse:
         path = request.match_info.get("path", "")
@@ -138,7 +153,8 @@ def create_app(settings: Settings) -> web.Application:
         tmp_path.unlink(missing_ok=True)
         headers = {
             "ETag": f'"{metadata.etag}"' if metadata.etag else "",
-            "Content-Length": str(metadata.size),
+            "Content-Length": "0",
+            "Location": f"/{path.strip('/')}",
         }
         return web.Response(status=201, headers=headers)
 
@@ -210,7 +226,7 @@ def create_app(settings: Settings) -> web.Application:
             headers.update(
                 {
                     "Allow": "OPTIONS, PROPFIND, MKCOL, PUT, GET, HEAD, DELETE, MOVE",
-                    "DAV": "1,2",
+                    "DAV": "1",
                 }
             )
             return web.Response(status=200, headers=headers)
@@ -236,7 +252,7 @@ def create_app(settings: Settings) -> web.Application:
         dest_path = destination.split(request.scheme + "://" + request.host, 1)[-1]
         dest_path = dest_path.lstrip("/")
         resource_manager.move(source, dest_path)
-        return web.Response(status=201)
+        return web.Response(status=201, headers={"Content-Length": "0"})
 
     app.router.add_route("OPTIONS", "/{path:.*}", handle_options)
     app.router.add_route("PROPFIND", "/{path:.*}", handle_propfind)
