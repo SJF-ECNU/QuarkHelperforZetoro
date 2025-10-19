@@ -29,6 +29,14 @@ class ResourceManager:
         self.client = client
         self.cache_root = cache_root
         self.cache_root.mkdir(parents=True, exist_ok=True)
+        try:
+            client_root = self.client.root
+        except AttributeError:  # pragma: no cover - defensive for alternate clients
+            client_root = None
+        self._roots_collide = (
+            client_root is not None
+            and Path(client_root).resolve() == self.cache_root.resolve()
+        )
 
     def _normalize(self, path: str) -> str:
         return path.strip("/")
@@ -60,7 +68,8 @@ class ResourceManager:
         cache_path = self._cache_path(normalized)
         ensure_parent(cache_path)
         shutil.copy2(data_path, cache_path)
-        self.client.upload_file(normalized, cache_path)
+        if not self._roots_collide:
+            self.client.upload_file(normalized, cache_path)
         etag = md5_file(cache_path)
         metadata = ResourceMetadata(
             path=normalized,
@@ -109,7 +118,8 @@ class ResourceManager:
         if src_cache.exists():
             ensure_parent(dst_cache)
             shutil.move(src_cache, dst_cache)
-        self.client.move(norm_source, norm_dest)
+        if not self._roots_collide:
+            self.client.move(norm_source, norm_dest)
         entry = self.cache.get(norm_source)
         if entry:
             self.cache.delete(norm_source)
