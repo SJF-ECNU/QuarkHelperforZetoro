@@ -4,6 +4,8 @@ import pathlib
 from functools import lru_cache
 from typing import Optional
 
+from ssl import SSLContext, PROTOCOL_TLS_SERVER
+
 from loguru import logger
 from pydantic import BaseSettings, Field, validator
 
@@ -20,6 +22,8 @@ class Settings(BaseSettings):
     db_path: pathlib.Path = Field(pathlib.Path("cache/index.db"), env="DB_PATH")
 
     quark_cookie: Optional[str] = Field(None, env="QUARK_COOKIE")
+    ssl_cert_file: Optional[pathlib.Path] = Field(None, env="SSL_CERT_FILE")
+    ssl_key_file: Optional[pathlib.Path] = Field(None, env="SSL_KEY_FILE")
 
     class Config:
         env_file = ".env"
@@ -30,10 +34,31 @@ class Settings(BaseSettings):
         path = pathlib.Path(value).expanduser().resolve()
         return path
 
+    @validator("ssl_cert_file", "ssl_key_file", pre=True)
+    def _expand_optional_path(
+        cls, value: str | pathlib.Path | None
+    ) -> Optional[pathlib.Path]:
+        if value in (None, ""):
+            return None
+        return pathlib.Path(value).expanduser().resolve()
+
     def ensure_directories(self) -> None:
         self.cache_dir.mkdir(parents=True, exist_ok=True)
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         logger.debug("Ensured cache directories exist: {}", self.cache_dir)
+
+    def build_ssl_context(self) -> Optional[SSLContext]:
+        if self.ssl_cert_file and self.ssl_key_file:
+            context = SSLContext(PROTOCOL_TLS_SERVER)
+            context.load_cert_chain(
+                certfile=str(self.ssl_cert_file), keyfile=str(self.ssl_key_file)
+            )
+            return context
+        if self.ssl_cert_file or self.ssl_key_file:
+            logger.warning(
+                "Both SSL_CERT_FILE and SSL_KEY_FILE must be provided for TLS; continuing without TLS"
+            )
+        return None
 
 
 @lru_cache()

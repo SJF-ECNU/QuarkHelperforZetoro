@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from ssl import SSLContext
+
 from aiohttp import web
 from loguru import logger
 
@@ -161,8 +163,23 @@ async def run_server(settings: Optional[Settings] = None) -> None:
     app = create_app(settings)
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, host=settings.host, port=settings.port)
-    logger.info("Starting QuarkDAV server on {}:{}", settings.host, settings.port)
+    ssl_context: Optional[SSLContext] = None
+    try:
+        ssl_context = settings.build_ssl_context()
+    except Exception as exc:
+        logger.error("Failed to configure TLS: {}", exc)
+        await runner.cleanup()
+        raise
+    scheme = "https" if ssl_context else "http"
+    site = web.TCPSite(
+        runner, host=settings.host, port=settings.port, ssl_context=ssl_context
+    )
+    logger.info(
+        "Starting QuarkDAV server on {}://{}:{}",
+        scheme,
+        settings.host,
+        settings.port,
+    )
     await site.start()
     try:
         while True:
