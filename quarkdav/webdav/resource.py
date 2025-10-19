@@ -85,6 +85,8 @@ class ResourceManager:
         normalized = self._normalize(path)
         cache_path = self._cache_path(normalized)
         if cache_path.exists():
+            if cache_path.is_dir():
+                raise IsADirectoryError(f"{cache_path} is a directory")
             return cache_path
         ensure_parent(cache_path)
         self.client.download_file(normalized, cache_path)

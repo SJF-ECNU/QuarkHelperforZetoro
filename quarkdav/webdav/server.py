@@ -112,6 +112,8 @@ def create_app(settings: Settings) -> web.Application:
             file_path = resource_manager.get_file(path)
         except FileNotFoundError:
             raise web.HTTPNotFound()
+        except IsADirectoryError:
+            raise web.HTTPMethodNotAllowed("GET", ["PROPFIND", "HEAD"])
         if not file_path.exists():
             raise web.HTTPNotFound()
         headers = {
